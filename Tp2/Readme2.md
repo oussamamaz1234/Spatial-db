@@ -1,133 +1,100 @@
-# 🌍 TD-3: SQL Spatial Functions in PostGIS
+🌍 TD-2: Creating Spatial Tables in PostgreSQL
+This tutorial shows you how to create spatial tables in PostgreSQL with PostGIS, add data through QGIS, and validate your data with SQL queries.
 
-This exercise focuses on using PostGIS spatial functions to determine how many parcels fall within a 1 km radius of designated fire points. You’ll learn how to import a shapefile into PostGIS, perform spatial queries, and visualize your results in QGIS.
-
----
-
-## 🗂️ Table of Contents
-
-1. [Import the Shapefile into PostGIS](#import-the-shapefile-into-postgis)
-2. [Queries to Analyze the Data](#queries-to-analyze-the-data)
-   - [Count Total Number of Parcels](#count-total-number-of-parcels)
-   - [Get Fire Point (Centroid of Parcel 462273)](#get-fire-point-centroid-of-parcel-462273)
-   - [Parcels within a 1 km Radius of Fire Point](#parcels-within-a-1-km-radius-of-fire-point)
-   - [Filter for Two Zones](#filter-for-two-zones)
-3. [Advanced Spatial Queries](#advanced-spatial-queries)
-   - [Count Parcels within 1 km of Both Zones](#count-parcels-within-1-km-of-both-zones)
-   - [Calculate Total Area of Parcels near Fire Points](#calculate-total-area-of-parcels-near-fire-points)
-4. [Additional Resources](#additional-resources)
-
----
-
-## 1. Import the Shapefile into PostGIS
-
-### 🛠️ Steps
-
-1. **Download the Shapefile**
-   - Make sure you have the Florida parcels shapefile saved locally.
-2. **Open the PostGIS Shapefile Import/Export Manager**
-   - On Windows, press the **Windows key** and search for **Shapefile Import/Export Manager**.
-3. **Select the Shapefile to Import**
-   - Browse to the **Florida parcels** shapefile.
-   - Choose a target schema and table name in your PostgreSQL database.
-4. **Begin Import**
-   - Click **Import** to load the data into PostgreSQL.
-
-Your parcels data should now be stored in a database table (often named `parcels`).
-
----
-
-## 2. Queries to Analyze the Data
-
-### 2.1 Count Total Number of Parcels
-
-Use this query to get an overall count of rows in the `parcels` table:
+🗂️ Table of Contents
+Creating a Spatial Table (Points)
+Creating a Spatial Table (Polygons)
+Creating a Spatial Table (LineStrings)
+Using QGIS to Insert Data
+🚀 Step 1: Creating a Spatial Table (Points)
+📋 SQL Command
+Use the following SQL script in pgAdmin to create a table named points_of_interests with a Point-type geometry column:
 
 sql
-
 Copier le code
-
-`SELECT COUNT(*)  FROM parcels;`
-
-**Result**: The total number of parcel records in your database.
-
----
-
-### 2.2 Get Fire Point (Centroid of Parcel 462273)
-
-Find the geographic center of parcel with `gid = 462273`:
+CREATE TABLE points_of_interests (
+  id SERIAL PRIMARY KEY,
+  nom VARCHAR(255),
+  geom GEOMETRY(Point, 4326)
+);
+🛠️ Using QGIS to Insert Data
+Open QGIS and set up a connection to your database:
+In the Explorer panel, right-click on PostgreSQL.
+Choose New Connection and enter your database details. Test the connection to confirm.
+Add the points_of_interests table as a layer:
+Double-click on the table to load it into QGIS.
+Switch to Edit Mode:
+Place points on the map where desired.
+Save your edits to store them in the database.
+🔍 Verifying Data
+In pgAdmin, run:
 
 sql
-
 Copier le code
+SELECT * 
+FROM points_of_interests;
+Confirm that your newly added records are listed.
 
-`SELECT ST_Centroid(geom) AS fire_point FROM parcels WHERE gid = 462273;`
-
-**Result**: A single **Point** geometry (the centroid) of that specific parcel.
-
----
-
-### 2.3 Parcels within a 1 km Radius of Fire Point
-
-In **QGIS**, you can filter parcels that are within 1 km of the fire point from parcel 462273. The spatial function `ST_DWithin` checks if the distance between two geometries is less than or equal to a given threshold (in meters, by default).
-
-**QGIS Filter Expression**:
+🚀 Step 2: Creating a Spatial Table (Polygons)
+📋 SQL Command
+In pgAdmin, create a zones_protegees table with a Polygon geometry column:
 
 sql
-
 Copier le code
-
-`ST_DWithin(   geom,   (SELECT ST_Centroid(geom) FROM "public"."parcels" WHERE gid = 462273),   1000 )`
-
-**Result**: Displays only parcels located within 1 km of the centroid of parcel 462273 in QGIS.
-
----
-
-### 2.4 Modify the Filter for Two Zones
-
-To filter parcels within 1 km of **either** parcel 462273 or 460957, extend the query:
+CREATE TABLE zones_protegees (
+  id SERIAL PRIMARY KEY,
+  nom VARCHAR(255),
+  geom GEOMETRY(Polygon, 4326)
+);
+🛠️ Using QGIS to Insert Data
+Load the zones_protegees table in QGIS, following the same steps as in Step 1.
+Switch to Edit Mode:
+Draw polygons on the map.
+Save your changes to update the database.
+🔍 Verifying Data
+In pgAdmin, run:
 
 sql
-
 Copier le code
+SELECT *
+FROM zones_protegees;
+Check that your polygons appear in the result set.
 
-`ST_DWithin(   geom,   (SELECT ST_Centroid(geom) FROM "public"."parcels" WHERE gid = 462273),    1000 ) OR  ST_DWithin(   geom,   (SELECT ST_Centroid(geom) FROM "public"."parcels" WHERE gid = 460957),   1000 )`
-
-**Result**: Only parcels that are within 1 km of **either** parcel’s centroid will be displayed.
-
----
-
-## 3. Advanced Spatial Queries
-
-### 3.1 Count Parcels within 1 km of Both Zones
-
-You can run this query in **pgAdmin** or **psql** to see how many parcels lie within 1 km of **either** centroid:
+🚀 Step 3: Creating a Spatial Table (LineStrings)
+📋 SQL Command
+Use this command in pgAdmin to create a routes table with a LineString geometry column:
 
 sql
-
 Copier le code
-
-`SELECT COUNT(*)  FROM parcels  WHERE ST_DWithin(   geom,    (SELECT ST_Centroid(geom) FROM parcels WHERE gid = 462273),    1000 ) OR ST_DWithin(   geom,    (SELECT ST_Centroid(geom) FROM parcels WHERE gid = 460957),   1000 );`
-
-**Result**: Returns a numerical count of parcels that fall in the 1 km radius of **at least one** of the two fire points.
-
----
-
-### 3.2 Calculate Total Area of Parcels near Fire Points
-
-To find the cumulative area of these parcels, use:
+CREATE TABLE routes (
+  id SERIAL PRIMARY KEY,
+  nom VARCHAR(255),
+  geom GEOMETRY(LINESTRING, 4326)
+);
+🛠️ Using QGIS to Insert Data
+Load the routes table in QGIS.
+Activate Edit Mode:
+Draw lines on the map.
+Save your work to commit the changes.
+🔍 Verifying Data
+In pgAdmin, run:
 
 sql
-
 Copier le code
+SELECT *
+FROM routes;
+Ensure that your newly drawn routes are shown in the query results.
 
-`SELECT SUM(ST_Area(geom))  FROM parcels  WHERE ST_DWithin(   geom,    (SELECT ST_Centroid(geom) FROM parcels WHERE gid = 462273),    1000 ) OR ST_DWithin(   geom,    (SELECT ST_Centroid(geom) FROM parcels WHERE gid = 460957),    1000 );`
+🛠️ Using QGIS to Insert Data (General Tips)
+Regardless of which geometry type you’re working with:
 
-**Result**: Provides the **total area** of all parcels located within 1 km of the selected fire points.
+Connect to your PostgreSQL database in QGIS.
+Load the table as a layer.
+Enable Edit Mode to add or modify your points, polygons, or lines.
+Save your edits to write them back to the database.
+🏁 Summary
+By following these steps, you’ve:
 
----
-
-## 4. Additional Resources
-
-- **PostGIS Documentation**
-- **QGIS Documentation**
+Created three spatial tables (points_of_interests, zones_protegees, and routes) for storing points, polygons, and lines.
+Populated each table with data using QGIS.
+Verified the contents of each table via SQL queries in pgAdmin.
